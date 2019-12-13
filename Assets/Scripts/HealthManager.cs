@@ -9,7 +9,7 @@ public class HealthManager : MonoBehaviour
 
     public static HealthManager x;
 
-    private int cHealth;
+    private float cHealth;
     private int maxHealth;
 
     [SerializeField] RectTransform canv;
@@ -23,6 +23,13 @@ public class HealthManager : MonoBehaviour
     private GameObject bloodDrip;
     [SerializeField]
     private Image hitPanel;
+    private bool healthing;
+    bool alive = true;
+
+    public bool Alive()
+    {
+        return alive;
+    }
 
     private void Awake()
     {
@@ -38,7 +45,7 @@ public class HealthManager : MonoBehaviour
 
     }
 
-    public int GetCurrentHealth()
+    public float GetCurrentHealth()
     {
         return cHealth;
     }
@@ -56,12 +63,16 @@ public class HealthManager : MonoBehaviour
         UpdateUI();
     }
 
-    public void ChangeHealth(int h)
+    public void ChangeHealth(float h)
     {
-        cHealth += h;
-        UpdateUI();
-        if ((int)Mathf.Sign(h) == 1) Heal();
-        else if ((int)Mathf.Sign(h) == -1) Damage();
+        if (!healthing)
+        {
+            float v = cHealth + h;
+            StartCoroutine(ChangeHealthLerp(cHealth, Mathf.Clamp(v, 0, maxHealth)));
+            if ((int)Mathf.Sign(h) == 1) Heal();
+            else if ((int)Mathf.Sign(h) == -1) Damage();
+
+        }
         
     }
 
@@ -84,6 +95,7 @@ public class HealthManager : MonoBehaviour
     private void Die()
     {
         StartCoroutine(MoveBloodDrip());
+        alive = false;
     }
 
     IEnumerator MoveBloodDrip()
@@ -96,6 +108,25 @@ public class HealthManager : MonoBehaviour
             f += Time.deltaTime * (1 / dripTime);
         }
         bloodDrip.transform.position = dripEnd;
+    }
+
+    IEnumerator ChangeHealthLerp(float s, float e)
+    {
+        //Debug.Log(Mathf.Epsilon);
+        healthing = true;
+        float f = 0;
+        while (f <= 1)
+        {
+            //Debug.Log(f);
+            cHealth = (s * (1 - f)) + (e * f);
+            yield return new WaitForEndOfFrame();
+            f += Time.deltaTime * 5;
+            UpdateUI();
+        }
+        cHealth = e;
+        UpdateUI();
+        healthing = false;
+        if (cHealth <= 0) Die();
     }
 
     IEnumerator LerpFromFullToClear(Color c)
